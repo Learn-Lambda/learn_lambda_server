@@ -1,0 +1,83 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id         Int        @id @default(autoincrement())
+  email      String     @unique
+  login      String     @unique
+  password   String
+  Solution   Solution[]
+  createDate DateTime   @default(now())
+}
+
+model Task {
+  id                        Int                         @id @default(autoincrement())
+  name                      String
+  description               String
+  functionName              String
+  code                      String
+  complexity                Int
+  createDate                DateTime                    @default(now())
+  testArguments             String
+  numberOfTimesSolved       Int                         @default(0)
+  isOpen                    Boolean                     @default(false)
+  tags                      String[]                    @default([])
+}
+
+model Solution {
+  id         Int      @id @default(autoincrement())
+  author     User     @relation(fields: [authorId], references: [id])
+  authorId   Int
+  taskId     Int
+  hash       String
+  code       String
+  createDate DateTime @default(now())
+}
+
+model Admin {
+  id       Int    @id @default(autoincrement())
+  login    String @unique
+  password String
+}
+
+model CommonTaskCollection {
+  id Int @id @default(autoincrement())
+}
+
+model UserTaskCollection {
+  id Int @id @default(autoincrement())
+}
+
+model SelectAllTask {
+  id         Int       @id @default(autoincrement())
+  lastUpdate DateTime?
+  createDate DateTime  @default(now())
+}
+
+model RecognitionCategory {
+  id              Int               @id @default(autoincrement())
+  createDate      DateTime          @default(now())
+  name            String
+  //markdown preview
+  helper          String
+  RecognitionTask RecognitionTask[]
+}
+
+model RecognitionTask {
+  id         Int                 @id @default(autoincrement())
+  createDate DateTime            @default(now())
+  categoryId Int
+  category   RecognitionCategory @relation(fields: [categoryId], references: [id])
+}
+
+model UserCurrentTaskCollection {
+  id          Int    @id @default(autoincrement())
+  userId      Int
+  currentTasksIds Int[] @default([])
+}
