@@ -23,7 +23,7 @@ function replaceConsoleLogToMyLog(code: string, line: number) {
 export class VmUseCase {
   call = (code: string): Result<void, VMContext[]> => {
     try {
-      const lines = code.split("\n");
+      const lines = code.replaceAll("export", "").split("\n");
       const executedLines: number[] = [];
 
       function __markExecuted(line: number) {

@@ -75,7 +75,7 @@ class AstParser {
   }
 }
 
-// AstParser.findArgs(sourceFile, "p");
+
 export class TaskBody {
   @IsString()
   functionName: string;
@@ -97,6 +97,7 @@ export class CreateTaskModelUseCase {
       ts.ScriptTarget.Latest,
       true
     );
+ 
     return AstParser.findFunctionName(sourceFile).map((fnName) =>
       AstParser.findArgs(sourceFile, fnName).map((args) =>
         Result.ok(new TaskBody(fnName, args, code))

@@ -10,6 +10,7 @@ import {
   CallbackStrategyUpdateModel,
   CallbackStrategyWithEmpty,
   ResponseBase,
+  CallbackStrategyWithValidationModel,
 } from "../../core/controllers/http_controller";
 import { IsNumber, IsString } from "class-validator";
 import { Result } from "../../core/helpers/result";
@@ -63,6 +64,28 @@ export class GetUserProfileAtJWT extends CallbackStrategyWithEmpty {
       return Result.ok(databaseModel);
     });
 }
+
+class Token {
+  @IsString()
+  token: string;
+}
+
+export class CheckToken extends CallbackStrategyWithValidationModel<Token> {
+  validationModel: ClassConstructor<Token> = Token;
+  call(model: Token): ResponseBase {
+    return jwt.verify(
+      model.token.trim().replace(/\s+/g, ""),
+      process.env.USER_JWT_SECRET,
+      (err: any, user: any) => {
+        if (err) {
+          return Result.error(jwt.sign({}, process.env.USER_JWT_SECRET));
+        }
+        return Result.ok("token valid");
+      }
+    );
+  }
+}
+ 
 export class UsersFeature extends FeatureHttpController {
   constructor() {
     super();
@@ -76,13 +99,15 @@ export class UsersFeature extends FeatureHttpController {
         "/get/token/vscode",
         new GetTokenVscode(),
         AccessLevel.user,
-        "POST",
+        "POST"
       ),
+      
       new SubRouter(
         "/get/user/profile/at/jwt",
         new GetUserProfileAtJWT(),
         AccessLevel.user
       ),
+      new SubRouter("/check/token", new CheckToken(), AccessLevel.public),
     ];
   }
 }

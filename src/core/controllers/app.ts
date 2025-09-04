@@ -56,18 +56,17 @@ export class App extends TypedEvent<ServerStatus> {
       }
     });
   }
-  authConnections: Map<string, number> = new Map();
-  authConnectionsV2: Map<number, string> = new Map();
+  authConnectionsWeb: Map<string, number> = new Map();
+  authConnectionsWebV2: Map<number, string> = new Map();
+  authConnectionsVsCode: Map<string, number> = new Map();
+  authConnectionsVsCodeV2: Map<number, string> = new Map();
   public listen() {
     const httpServer = createServer(this.app);
     const io = new Server(httpServer, {
       cors: { origin: "*" },
     });
-    // io.on('exit',(socket))
 
     io.on("connection", (socket) => {
-      // console.log(socket.id);
-
       socket.on("auth", async (payload) => {
         if (payload.jwt === undefined) {
           return;
@@ -80,21 +79,37 @@ export class App extends TypedEvent<ServerStatus> {
             if (err !== null) {
               return;
             }
-            this.authConnectionsV2.set(Number(user.userId), socket.id);
-            this.authConnections.set(socket.id, Number(user.userId));
+            if (payload.env === "web") {
+              this.authConnectionsWebV2.set(Number(user.userId), socket.id);
+              this.authConnectionsWeb.set(socket.id, Number(user.userId));
+            }
+            if (payload.env === "vscode") {
+              this.authConnectionsVsCodeV2.set(Number(user.userId), socket.id);
+              this.authConnectionsVsCode.set(socket.id, Number(user.userId));
+            }
           }
         );
       });
       this.socketSubscribers?.map((el) => {
         el.emitter.on((e) => {
-          if (this.authConnectionsV2.get(e.userId) == socket.id) {
+          if (this.authConnectionsWebV2.get(e.userId) === socket.id) {
+            socket.emit(el.event, e);
+          }
+          if (this.authConnectionsVsCodeV2.get(e.userId) === socket.id) {
             socket.emit(el.event, e);
           }
         });
       });
       socket.on("disconnect", (reason) => {
-        this.authConnectionsV2.delete(this.authConnections.get(socket.id));
-        this.authConnections.delete(socket.id);
+        this.authConnectionsWebV2.delete(
+          this.authConnectionsWeb.get(socket.id)
+        );
+        this.authConnectionsWeb.delete(socket.id);
+
+        this.authConnectionsVsCodeV2.delete(
+          this.authConnectionsVsCode.get(socket.id)
+        );
+        this.authConnectionsVsCode.delete(socket.id);
       });
     });
 

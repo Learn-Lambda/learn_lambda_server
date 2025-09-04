@@ -60,7 +60,7 @@ export class FeatureHttpController extends CoreHttpController<any> {
                   );
                 }
                 if (el.accessLevel === AccessLevel.adminUser) {
-                  needNext = validationMiddleware(
+                  needNext = validationMiddlewareNotResponse(
                     req,
                     res,
                     process.env.USER_JWT_SECRET
