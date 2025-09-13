@@ -15,9 +15,6 @@ export enum AccessLevel {
   adminUser,
 }
 
- 
-
-
 export type HttpMethodType =
   | "GET"
   | "POST"
@@ -65,12 +62,14 @@ export abstract class CallbackStrategyCreateDbModel<V> extends CallbackCore {
       result = await this.client[`${this.dbCollectionName}`].create({
         data: this.modelHelper(model),
       });
+      this.afterCallback(result.id);
     } catch (error) {
       //TODO: нужна нормальная обработка ошибок
       console.log(error);
     }
     return Result.isNotNull(result);
   };
+  async afterCallback(id: number) {}
 }
 
 export abstract class CallbackStrategyUpdateModel<

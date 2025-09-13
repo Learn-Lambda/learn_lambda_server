@@ -1,12 +1,12 @@
 import { VM } from "vm2";
-import { Result } from "../../core/helpers/result";
 import ts from "typescript";
-import { ReadFileUseCase } from "../../core/usecases/read_file_usecase";
-import { ResponseBase } from "../../core/controllers/http_controller";
 import { parse, print } from "recast";
 import * as babelParser from "@babel/parser";
 import { visit, builders } from "ast-types";
-import { SaveFileUseCase } from "../../core/usecases/save_file_usecase";
+import { ResponseBase } from "../../../core/controllers/http_controller";
+import { ReadFileUseCase } from "../../../core/usecases/read_file_usecase";
+import { Result } from "../../../core/helpers/result";
+
 export interface _CallExpression {
   type: Type;
   value: string;
@@ -83,7 +83,6 @@ export interface StatisticTypeUsage {
     parseFloat?: number;
     parseInt?: number;
   };
-  Boolean: {};
   RegExp: {};
   String: {
     valueOfString?: number;
@@ -120,6 +119,7 @@ export interface StatisticTypeUsage {
     search?: number;
   };
 }
+
 export class StatisticTypeUsageCompleteUseCase {
   call = async (code: string): ResponseBase => {
     return (
@@ -134,7 +134,6 @@ export class StatisticTypeUsageCompleteUseCase {
         Map: {},
         Set: {},
         Number: {},
-        Boolean: {},
         RegExp: {},
       };
 

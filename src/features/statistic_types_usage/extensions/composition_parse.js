@@ -5,7 +5,6 @@ const parseObject = {
   Map: {},
   Set: {},
   Number: {},
-  Boolean: {},
   RegExp: {},
 };
 

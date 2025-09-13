@@ -8,25 +8,25 @@ generator client {
 }
 
 model User {
-  id         Int        @id @default(autoincrement())
-  email      String     @unique
-  login      String     @unique
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  login      String   @unique
   password   String
-  createDate DateTime   @default(now())
+  createDate DateTime @default(now())
 }
 
 model Task {
-  id                        Int                         @id @default(autoincrement())
-  name                      String
-  description               String
-  functionName              String
-  code                      String
-  complexity                Int
-  createDate                DateTime                    @default(now())
-  testArguments             String
-  numberOfTimesSolved       Int                         @default(0)
-  isOpen                    Boolean                     @default(false)
-  tags                      String[]                    @default([])
+  id                  Int      @id @default(autoincrement())
+  name                String
+  description         String
+  functionName        String
+  code                String
+  complexity          Int
+  createDate          DateTime @default(now())
+  testArguments       String
+  numberOfTimesSolved Int      @default(0)
+  isOpen              Boolean  @default(false)
+  tags                String[] @default([])
 }
 
 model Solution {
@@ -75,7 +75,20 @@ model RecognitionTask {
 }
 
 model UserCurrentTaskCollection {
-  id          Int    @id @default(autoincrement())
-  userId      Int
+  id              Int   @id @default(autoincrement())
+  userId          Int
   currentTasksIds Int[] @default([])
+}
+
+model StatisticTypesUsage {
+  id                 Int    @id @default(autoincrement())
+  userId             Int
+  jsonStatisticUsage String
+}
+
+model StatisticTaskSolutions {
+  id Int @id @default(autoincrement())
+  userId Int
+  year Int
+  date String[]
 }

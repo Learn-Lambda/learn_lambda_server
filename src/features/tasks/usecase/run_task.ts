@@ -138,7 +138,7 @@ export class RunTaskUseCase {
 export class TaskExecuteResult {
   functionName: string;
   wasLaunchedWithArguments: any;
-  theResultWasObtained: string;
+  theResultWasObtained: any;
   theResultWasExpected: string;
   status: boolean;
   constructor(
@@ -185,26 +185,23 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
             JSON.parse(databaseModel.testArguments)
           )
         )
-      ).map(async (el) => {
+      ).map(async (runTaskResult) => {
         const hash = generateSHA256(model.code.trim());
 
         return Result.isNotNull(
           await this.client.solution.findFirst({ where: { hash: hash } })
         ).fold(
-          async (_) => {
-            // console.log(el);
-            return Result.ok(el);
-          },
-          async (_) => {
-            await this.client.solution.create({
-              data: {
-                taskId: databaseModel.id,
-                hash: hash,
-                code: model.code,
-              },
-            });
-            return Result.ok(el);
-          }
+          async (_) => Result.ok(runTaskResult),
+          async (_) =>
+            Result.isNotNull(
+              await this.client.solution.create({
+                data: {
+                  taskId: databaseModel.id,
+                  hash: hash,
+                  code: model.code,
+                },
+              })
+            ).map(() => Result.ok(runTaskResult))
         );
       });
     });
