@@ -68,6 +68,7 @@ export class TasksFeature extends FeatureHttpController {
         AccessLevel.user,
         "GET"
       ),
+    
     ];
   }
 }
