@@ -124,7 +124,8 @@ export class StatisticTypeUsageCompleteUseCase {
   call = async (code: string): ResponseBase => {
     return (
       await new ReadFileUseCase().call<String>(
-        __dirname + "/extensions/composition_parse.js"
+        __dirname.replaceAll("/usecase", "") +
+          "/extensions/composition_parse.js"
       )
     ).map(async (file) => {
       const statisticTypeUsage: StatisticTypeUsage = {
@@ -161,7 +162,7 @@ export class StatisticTypeUsageCompleteUseCase {
 
       return (
         await new ReadFileUseCase().call<String>(
-          __dirname + "/extensions/fn.js"
+          __dirname.replaceAll("/usecase", "") + "/extensions/fn.js"
         )
       ).map((fnAstParseHelper) => {
         const [codeBody, fn] = translationCode.split("//${code_fn}");

@@ -1,0 +1,7 @@
+export const p = (a:string):string =>{
+    return
+}
+
+console.log(p('1')) //'1'
+console.log(p('2')) //'2'
+console.log(p('3')) //'3'

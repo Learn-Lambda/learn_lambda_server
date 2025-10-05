@@ -1,6 +1,7 @@
 import { extensions } from "../../src/core/extensions/extensions";
+import { StatisticTypeUsageCompleteUseCase } from "../../src/features/statistic_types_usage/usecase/statistic_types_usage_computed_usecase";
+import { getFake } from "../core/helper/get_fake";
 
-import { StatisticTypeUsageCompleteUseCase } from "../../src/features/statistic_types_usage/statistic_types_usage_computed_usecase";
 import { useCaseTest } from "../core/helper/use_case_test";
 
 const defaultTypesUsage = {
@@ -10,7 +11,6 @@ const defaultTypesUsage = {
   Map: {},
   Set: {},
   Number: {},
-  Boolean: {},
   RegExp: {},
 };
 
@@ -19,6 +19,7 @@ const assignDefaultObject = (assign) =>
   Object.assign(JSON.parse(JSON.stringify(defaultTypesUsage)), assign);
 
 describe("feature statistic types usage", async () => {
+    
   useCaseTest(
     "String",
     "/code_types_usage/string.ts",
@@ -62,6 +63,7 @@ describe("feature statistic types usage", async () => {
       },
     })
   );
+ 
   useCaseTest(
     "Array",
     "/code_types_usage/array.ts",

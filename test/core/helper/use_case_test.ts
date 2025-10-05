@@ -12,7 +12,7 @@ export const useCaseTest = async (
     (await useCase.call(await getFake(fakePath))).map((value) => {
       result = value;
     });
-
+    // console.log(result);
     testEqualObject(result, equal);
   });
 };

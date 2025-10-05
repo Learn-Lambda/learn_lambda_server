@@ -10,7 +10,6 @@ export class ReadFileUseCase {
         return Result.error(`ReadFileUseCase got the bad way: ${path}`);
       }
       const file = await this.fileSystemRepository.readFileAsync(path);
-
       return Result.ok(file.toString() as T);
     } catch (error) {
       return Result.error(`ReadFileUseCase error:${error}`);

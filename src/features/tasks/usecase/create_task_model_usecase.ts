@@ -48,24 +48,26 @@ class AstParser {
         node.expression.name.getText() === "log"
       ) {
         node.arguments.forEach((arg) => {
-          args.push({
-            result: eval(
-              rootNode
+          try {
+            args.push({
+              result: eval(
+                rootNode
+                  .getText()
+                  .split("\n")
+                  .filter((el) => el.includes(arg.getText()))
+                  .at(0)
+                  .split("//")
+                  .at(1)
+              ),
+              arguments: eval(arg
                 .getText()
-                .split("\n")
-                .filter((el) => el.includes(arg.getText()))
-                .at(0)
-                .split("//")
-                .at(1)
-            ),
-            arguments: arg
-              .getText()
-              .replace(fnName, "")
-              .replace("(", "")
-              .replace(")", "")
-              .split(",")
-              .map((el) => eval(el)),
-          });
+                .replace(fnName, "")
+                .replace("(", "")
+                .replace(")", ""))
+                
+            });
+          } catch (e) {}
+
         });
       }
 
@@ -74,7 +76,6 @@ class AstParser {
     return Result.ok(args);
   }
 }
-
 
 export class TaskBody {
   @IsString()
@@ -89,7 +90,7 @@ export class TaskBody {
     this.code = code;
   }
 }
-export class CreateTaskModelUseCase {
+export class FillInTaskModelUseCase {
   call = async (code: string): ResponseBase => {
     const sourceFile = ts.createSourceFile(
       "sample.ts",
@@ -97,7 +98,7 @@ export class CreateTaskModelUseCase {
       ts.ScriptTarget.Latest,
       true
     );
- 
+
     return AstParser.findFunctionName(sourceFile).map((fnName) =>
       AstParser.findArgs(sourceFile, fnName).map((args) =>
         Result.ok(new TaskBody(fnName, args, code))
@@ -105,4 +106,3 @@ export class CreateTaskModelUseCase {
     );
   };
 }
- 

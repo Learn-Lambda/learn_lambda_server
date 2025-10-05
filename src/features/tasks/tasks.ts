@@ -14,6 +14,7 @@ import { FillInTaskModel } from "./usecase/fill_in_task_model";
 import { RunTask } from "./usecase/run_task";
 import { CreateTask } from "./usecase/create_task";
 import { GetAllTasks } from "./usecase/get_all_tasks";
+import { RemoveTask } from "./usecase/remove_task";
 interface TaskUpdate extends IPrivateSocketData {
   tasks: number[];
 }
@@ -36,7 +37,7 @@ export class TasksFeature extends FeatureHttpController {
       new SubRouter("/tasks", new CreateTask(), AccessLevel.public, "POST"),
       new SubRouter("/tasks", new EditTask(), AccessLevel.admin, "PUT"),
       new SubRouter("/tasks", new DeleteTask(), AccessLevel.admin, "DELETE"),
-      new SubRouter("/run/task", new RunTask(), AccessLevel.adminUser, "POST"),
+      new SubRouter("/run/task", new RunTask(), AccessLevel.user, "POST"),
       new SubRouter("/add/task", new AddTask(), AccessLevel.user, "POST"),
       new SubRouter(
         "/get/current/tasks/id",
@@ -68,7 +69,7 @@ export class TasksFeature extends FeatureHttpController {
         AccessLevel.user,
         "GET"
       ),
-    
+      new SubRouter("/remove/task", new RemoveTask(), AccessLevel.user, "POST"),
     ];
   }
 }

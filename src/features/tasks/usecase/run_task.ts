@@ -8,7 +8,8 @@ import { Result } from "../../../core/helpers/result";
 import { generateSHA256 } from "../../../core/helpers/sha256";
 import ts from "typescript";
 import { VM } from "vm2";
-
+import prettier from "prettier";
+import { StatisticTypeUsageCompleteUseCase } from "../../statistic_types_usage/usecase/statistic_types_usage_computed_usecase";
 class TestModel {
   functionName: string;
 
@@ -37,13 +38,22 @@ const transpile = (code: string): Result<string, string> => {
 };
 const runVm = (code: string): Result<string, any> => {
   try {
-    return Result.ok(new VM().run(code));
+    return Result.ok(new VM().run(removeConsoleLogs(code)));
   } catch (_) {
-    console.log(code);
-    console.log(_);
-    return Result.error("vm error");
+    return Result.error("ошибка исполнения");
   }
 };
+export interface TestResult {
+  value: Value;
+}
+
+export interface Value {
+  functionName: string;
+  wasLaunchedWithArguments: string;
+  theResultWasObtained: string;
+  theResultWasExpected: string;
+  status: boolean;
+}
 
 function hasFunctionNamedFnInString(
   code: string,
@@ -59,13 +69,11 @@ function hasFunctionNamedFnInString(
   let found = false;
 
   function visit(node: ts.Node) {
-    // Обычная функция с именем
     if (ts.isFunctionDeclaration(node) && node.name?.text === functionName) {
       found = true;
       return;
     }
 
-    // Переменная с присвоенной function expression или arrow function и нужным именем переменной
     if (ts.isVariableStatement(node)) {
       node.declarationList.declarations.forEach((decl) => {
         if (
@@ -90,7 +98,9 @@ function hasFunctionNamedFnInString(
 }
 
 export class RunTaskUseCase {
-  call = async (testModel: TestModel): Promise<ResponseBase> =>
+  call = async (
+    testModel: TestModel
+  ): Promise<Result<Result<TaskExecuteResult, any>[], any>> =>
     Result.ok(
       testModel.testArguments
         .map(
@@ -111,9 +121,9 @@ export class RunTaskUseCase {
 };
 
         ${testModel.testFunction}
-        assert(${testModel.functionName}, [${
-              testModel.testArguments.at(index).arguments
-            }], ${testModel.testArguments.at(index).result})`
+        assert(${testModel.functionName}, [${argumentsMapper(
+          testModel.testArguments.at(index).arguments
+        )}], ${argumentsMapper(testModel.testArguments.at(index).result)})`
         )
         .map((el, index) =>
           transpile(el).map((code) =>
@@ -151,6 +161,9 @@ export class TaskExecuteResult {
     this.functionName = functionName;
     this.wasLaunchedWithArguments = wasLaunchedWithArguments;
     this.theResultWasObtained = theResultWasObtained;
+    if (theResultWasObtained === undefined) {
+      this.theResultWasObtained = "undefined";
+    }
     this.theResultWasExpected = theResultWasExpected;
     this.status = status;
   }
@@ -185,24 +198,151 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
             JSON.parse(databaseModel.testArguments)
           )
         )
-      ).map(async (runTaskResult) => {
-        const hash = generateSHA256(model.code.trim());
+      ).map(async (runTask) => {
+        const runTaskResult = runTask as TestResult[];
+        const testIsSuccess = runTaskResult
+          .filter((el) => el.value.status)
+          .isNotEmpty();
+        console.log(runTask);
+        const isAiSolution = false;
+        if (testIsSuccess) {
+          const userCurrentTaskCollection =
+            await this.client.userCurrentTaskCollection.findFirst({
+              where: { userId: this.getUserIdNumber() },
+            });
 
-        return Result.isNotNull(
-          await this.client.solution.findFirst({ where: { hash: hash } })
-        ).fold(
-          async (_) => Result.ok(runTaskResult),
-          async (_) =>
-            Result.isNotNull(
-              await this.client.solution.create({
-                data: {
-                  taskId: databaseModel.id,
-                  hash: hash,
-                  code: model.code,
+          await this.client.userCurrentTaskCollection.update({
+            where: { id: userCurrentTaskCollection.id },
+            data: {
+              currentTasksIds: userCurrentTaskCollection.currentTasksIds.filter(
+                (el) => el !== model.taskNumber
+              ),
+            },
+          });
+          const formatCode = await removeMissingConsoleLogAndFormat(model.code);
+
+          (
+            await new StatisticTypeUsageCompleteUseCase().call(
+              codeOneCall(model.code)
+            )
+          ).map(async (statisticTypeUsage) => {
+            // console.log(JSON.stringify(statisticTypeUsage));
+
+            const statisticTypesUsage =
+              await this.client.statisticTypesUsage.findFirst({
+                where: {
+                  userId: this.getUserIdNumber(),
                 },
-              })
-            ).map(() => Result.ok(runTaskResult))
-        );
+              });
+
+            const jsonStatisticUsage = JSON.parse(
+              // @ts-ignore
+              statisticTypesUsage.jsonStatisticUsage
+            );
+            Object.entries(statisticTypeUsage).forEach((value) => {
+              if (Object.keys(value.at(1)).length !== 0) {
+                Object.entries(value.at(1)).forEach((el) => {
+                  const key = isAiSolution ? "aiUsage" : "usageSingly";
+               
+                  // @ts-ignore
+                  jsonStatisticUsage[value.at(0)][el.at(0)][key] += el.at(1);
+                  // @ts-ignore
+                  jsonStatisticUsage[value.at(0)][el.at(0)].usageTotal +=
+                    el.at(1);
+                });
+              }
+            });
+            console.log(201);
+            console.log(JSON.stringify(jsonStatisticUsage));
+
+            await this.client.statisticTypesUsage.update({
+              where: { id: statisticTypesUsage.id },
+              data: {
+                jsonStatisticUsage: JSON.stringify(jsonStatisticUsage),
+              },
+            });
+          });
+
+          const statisticTaskSolutions =
+            await this.client.statisticTaskSolutions.findFirst({
+              where: {
+                userId: this.getUserIdNumber(),
+                year: new Date().getFullYear(),
+              },
+            });
+          statisticTaskSolutions.date;
+
+          // [{ date: "2025-08-01", count: 5, level: 2 }];
+          return Result.isNotNull(
+            await this.client.solution.create({
+              data: {
+                taskId: databaseModel.id,
+                hash: generateSHA256(clearCode(model.code)),
+                code: formatCode,
+                counter: 0,
+              },
+            })
+          ).map(() => Result.ok(runTaskResult));
+        } else {
+          return Result.ok(runTaskResult);
+        }
       });
     });
 }
+const removeConsoleLogs = (code: string) => {
+  const lines = code.split("\n");
+
+  const indexes = lines
+    .map((line, index) =>
+      line === ""
+        ? index
+        : line.includes("console.log") && line.includes("//")
+          ? index
+          : -1
+    )
+    .filter((index) => index !== -1);
+  return lines.filter((_, index) => !indexes.includes(index)).join("\n");
+};
+
+const removeMissingConsoleLogAndFormat = (code: string) => {
+  return formatCode(removeConsoleLogs(code));
+};
+
+async function formatCode(
+  code: string,
+  parser: prettier.BuiltInParserName = "typescript"
+): Promise<string> {
+  return prettier.format(code, {
+    parser,
+    singleQuote: true,
+    semi: true,
+    tabWidth: 2,
+    trailingComma: "all",
+  });
+}
+const clearCode = (code: string) => {
+  return code.replace(" ", "").replace("\n", "");
+};
+
+const argumentsMapper = (arg: any): string => {
+  if (typeof arg === "string") {
+    return `"${arg}"`;
+  }
+  return arg;
+};
+
+const codeOneCall = (code: string) => {
+  const lines = code.split("\n");
+
+  const indexes = lines
+    .map((line, index) =>
+      line === ""
+        ? index
+        : line.includes("console.log") && line.includes("//")
+          ? index
+          : -1
+    )
+    .filter((index) => index !== -1);
+  indexes.pop();
+  return lines.filter((_, index) => !indexes.includes(index)).join("\n");
+};

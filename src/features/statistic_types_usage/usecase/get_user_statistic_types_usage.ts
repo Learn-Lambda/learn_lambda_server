@@ -16,6 +16,7 @@ export class GetUserStatisticTypesUsage extends CallbackStrategyWithValidationMo
         },
       })
     ).map((el) => {
+      // @ts-ignore
       el.jsonStatisticUsage = JSON.parse(el.jsonStatisticUsage);
       return Result.ok(el);
     });
