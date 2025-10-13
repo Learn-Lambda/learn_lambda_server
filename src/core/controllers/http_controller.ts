@@ -43,7 +43,7 @@ export abstract class CallbackStrategyWithEmpty extends CallbackCore {
   abstract call(): ResponseBase;
 }
 export abstract class CallbackStrategyWithValidationModel<
-  V
+  V,
 > extends CallbackCore {
   abstract validationModel: ClassConstructor<V>;
 
@@ -73,7 +73,7 @@ export abstract class CallbackStrategyCreateDbModel<V> extends CallbackCore {
 }
 
 export abstract class CallbackStrategyUpdateModel<
-  V extends EditModel
+  V extends EditModel,
 > extends CallbackCore {
   abstract dbCollectionName: string;
   abstract validationModel: ClassConstructor<V>;
@@ -120,6 +120,7 @@ export abstract class CallBackStrategyDeleteModelByQueryId extends CallbackCore 
   abstract deleteCallback: undefined | callbackUpdateDelete;
 }
 
+
 export type callbackUpdateDelete = (id: number) => Promise<void>;
 export abstract class CallBackStrategyPagination<T> extends CallbackCore {
   pageSize: number = 10;
@@ -144,9 +145,8 @@ export abstract class CallBackStrategyPagination<T> extends CallbackCore {
   async helper(skip: number, responseBase: ResponseBase): ResponseBase {
     return (await responseBase).fold(
       async (success) => {
-        const totalCount = await this.client[
-          `${this.dbCollectionName}`
-        ].count();
+        const totalCount =
+          await this.client[`${this.dbCollectionName}`].count();
 
         return Result.ok({
           data: success,

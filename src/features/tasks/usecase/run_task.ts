@@ -1,6 +1,7 @@
 import { ClassConstructor } from "class-transformer";
 import { IsNumber, IsString } from "class-validator";
 import {
+  CallbackCore,
   CallbackStrategyWithValidationModel,
   ResponseBase,
 } from "../../../core/controllers/http_controller";
@@ -10,6 +11,7 @@ import ts from "typescript";
 import { VM } from "vm2";
 import prettier from "prettier";
 import { StatisticTypeUsageCompleteUseCase } from "../../statistic_types_usage/usecase/statistic_types_usage_computed_usecase";
+import { JsonValue } from "@prisma/client/runtime/library";
 class TestModel {
   functionName: string;
 
@@ -243,7 +245,7 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
               if (Object.keys(value.at(1)).length !== 0) {
                 Object.entries(value.at(1)).forEach((el) => {
                   const key = isAiSolution ? "aiUsage" : "usageSingly";
-               
+
                   // @ts-ignore
                   jsonStatisticUsage[value.at(0)][el.at(0)][key] += el.at(1);
                   // @ts-ignore
@@ -252,8 +254,6 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
                 });
               }
             });
-            console.log(201);
-            console.log(JSON.stringify(jsonStatisticUsage));
 
             await this.client.statisticTypesUsage.update({
               where: { id: statisticTypesUsage.id },
@@ -346,3 +346,128 @@ const codeOneCall = (code: string) => {
   indexes.pop();
   return lines.filter((_, index) => !indexes.includes(index)).join("\n");
 };
+export class TaskAddSolution extends CallbackStrategyWithValidationModel<RunTaskModel> {
+  validationModel: ClassConstructor<RunTaskModel> = RunTaskModel;
+  async call(model: RunTaskModel): ResponseBase {
+    return Result.isNotNull(
+      await this.client.task.findFirst({ where: { id: model.taskNumber } })
+    ).map(async (databaseModel) => {
+      return await (
+        await new RunTaskUseCase().call(
+          new TestModel(
+            databaseModel.functionName,
+            model.code,
+            JSON.parse(databaseModel.testArguments)
+          )
+        )
+      ).map(async (runTask) => {
+        const runTaskResult = runTask as TestResult[];
+        const testIsSuccess = runTaskResult
+          .filter((el) => el.value.status)
+          .isNotEmpty();
+        if (testIsSuccess) {
+          const formatCode = await removeMissingConsoleLogAndFormat(model.code);
+
+          (
+            await new StatisticTypeUsageCompleteUseCase().call(
+              codeOneCall(model.code)
+            )
+          ).map(async (statisticTypeUsage) => {
+            // const statisticTypesUsage =
+            //   await this.client.statisticTypesUsage.findFirst({
+            //     where: {
+            //       userId: this.getUserIdNumber(),
+            //     },
+            //   });
+            // console.log(statisticTypesUsage);
+            // const jsonStatisticUsage = JSON.parse(
+            //   statisticTypesUsage.jsonStatisticUsage
+            // );
+            // console.log(jsonStatisticUsage);
+
+            const tags: string[] = [];
+            Object.entries(statisticTypeUsage).forEach((value) => {
+              if (Object.keys(value.at(1)).length !== 0) {
+                Object.entries(value.at(1)).forEach((el) => {
+                  tags.push(`${value.at(0)}.${el.at(0)}`);
+                });
+              }
+            });
+            console.log(tags);
+            if (tags.isNotEmpty()) {
+              await this.client.task.update({
+                where: { id: databaseModel.id },
+                data: {
+                  tags: databaseModel.tags.concat(
+                    tags.filter((el) => !databaseModel.tags.includes(el))
+                  ),
+                },
+              });
+            }
+            new UpdateGlobalsTagsStatisticUseCase().call(tags, Operation.plus);
+          });
+
+          return Result.isNotNull(
+            await this.client.solution.create({
+              data: {
+                taskId: databaseModel.id,
+                hash: generateSHA256(clearCode(model.code)),
+                code: formatCode,
+                counter: 0,
+              },
+            })
+          ).map(() => Result.ok(runTaskResult));
+        } else {
+          return Result.ok(runTaskResult);
+        }
+      });
+    });
+  }
+}
+export enum Operation {
+  minus,
+  plus,
+}
+class UpdateGlobalsTagsStatisticUseCase extends CallbackCore {
+  call = async (newTags: string[], operation: Operation) => {
+    Result.isNotNull(await this.client.solutionTags.findFirst()).fold(
+      async (solutionTags) =>
+        await this._update(solutionTags, newTags, operation),
+      async (_) =>
+        await this._update(
+          await this.client.solutionTags.create({
+            data: { jsonStatisticUsage: JSON.stringify({}) },
+          }),
+          newTags,
+          operation
+        )
+    );
+  };
+
+  _update = async (
+    solutionTags: { id: number; jsonStatisticUsage: JsonValue },
+    newTags: string[],
+    operation: Operation
+  ) => {
+    const oldTags = JSON.parse(solutionTags.jsonStatisticUsage as string);
+    newTags.forEach((el) => {
+      if (oldTags[el] === undefined) {
+        oldTags[el] = 1;
+      } else {
+        if (operation === Operation.plus) {
+          oldTags[el] += 1;
+        }
+        if (operation === Operation.minus) {
+          oldTags[el] -= 1;
+        }
+      }
+    });
+    console.log(oldTags);
+    await this.client.solutionTags.update({
+      where: { id: solutionTags.id },
+      data: {
+        jsonStatisticUsage: JSON.stringify(oldTags),
+      },
+    });
+  };
+}

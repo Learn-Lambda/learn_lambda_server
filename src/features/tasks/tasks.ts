@@ -11,10 +11,12 @@ import { UserCurrentTaskCollection } from "./usecase/user_current_task_collectio
 import { DeleteTask } from "./usecase/delete_task";
 import { EditTask } from "./usecase/edit_task";
 import { FillInTaskModel } from "./usecase/fill_in_task_model";
-import { RunTask } from "./usecase/run_task";
+import { RunTask, TaskAddSolution } from "./usecase/run_task";
 import { CreateTask } from "./usecase/create_task";
-import { GetAllTasks } from "./usecase/get_all_tasks";
+import { GetAllTasks, GetAllTasksClient } from "./usecase/get_all_tasks";
 import { RemoveTask } from "./usecase/remove_task";
+import { GetTagsStatistic } from "./usecase/get_tags_statistic";
+
 interface TaskUpdate extends IPrivateSocketData {
   tasks: number[];
 }
@@ -28,6 +30,14 @@ export class TasksFeature extends FeatureHttpController {
     super();
     this.subRoutes = [
       new SubRouter("/tasks", new GetAllTasks(), AccessLevel.public, "GET"),
+
+      new SubRouter(
+        "/get/all/task/client",
+        new GetAllTasksClient(),
+        AccessLevel.public,
+        "POST"
+      ),
+
       new SubRouter(
         "/get/task/by/id",
         new GetTaskById(),
@@ -39,6 +49,18 @@ export class TasksFeature extends FeatureHttpController {
       new SubRouter("/tasks", new DeleteTask(), AccessLevel.admin, "DELETE"),
       new SubRouter("/run/task", new RunTask(), AccessLevel.user, "POST"),
       new SubRouter("/add/task", new AddTask(), AccessLevel.user, "POST"),
+      new SubRouter(
+        "/task/add/solution",
+        new TaskAddSolution(),
+        AccessLevel.admin,
+        "POST"
+      ),
+      new SubRouter(
+        "/get/tags/statistic",
+        new GetTagsStatistic(),
+        AccessLevel.public,
+        "GET"
+      ),
       new SubRouter(
         "/get/current/tasks/id",
         new GetCurrentTaskId(),
@@ -57,6 +79,7 @@ export class TasksFeature extends FeatureHttpController {
         AccessLevel.user,
         "GET"
       ),
+
       new SubRouter(
         "/fill/task/args",
         new FillInTaskModel(),

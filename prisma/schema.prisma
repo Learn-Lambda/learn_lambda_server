@@ -16,23 +16,25 @@ model User {
 }
 
 model Task {
-  id                  Int      @id @default(autoincrement())
-  name                String
-  description         String
-  functionName        String
-  code                String
-  complexity          Int
-  createDate          DateTime @default(now())
-  testArguments       String
-  numberOfTimesSolved Int      @default(0)
-  isOpen              Boolean  @default(false)
-  tags                String[] @default([])
+  id                    Int      @id @default(autoincrement())
+  name                  String
+  description           String
+  functionName          String
+  code                  String
+  complexity            Int
+  createDate            DateTime @default(now())
+  testArguments         String
+  numberOfTimesSolved   Int      @default(0)
+  isOpen                Boolean  @default(false)
+  tags                  String[] @default([])
+  usersWhoSolvedTheTask Int[]    @default([])
+  usersWhoSolvedTaskAiHelp Int[] @default([])
 }
 
 model Solution {
   id         Int      @id @default(autoincrement())
   authors    Int[]
-  counter Int
+  counter    Int
   taskId     Int
   hash       String
   code       String
@@ -82,14 +84,19 @@ model UserCurrentTaskCollection {
 }
 
 model StatisticTypesUsage {
-  id                 Int    @id @default(autoincrement())
+  id                 Int  @id @default(autoincrement())
   userId             Int
   jsonStatisticUsage Json
 }
 
 model StatisticTaskSolutions {
-  id Int @id @default(autoincrement())
+  id     Int      @id @default(autoincrement())
   userId Int
-  year Int
-  date String[]
+  year   Int
+  date   String[]
+}
+
+model SolutionTags {
+  id                 Int  @id @default(autoincrement())
+  jsonStatisticUsage Json
 }
