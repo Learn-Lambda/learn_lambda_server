@@ -12,6 +12,8 @@ import { VM } from "vm2";
 import prettier from "prettier";
 import { StatisticTypeUsageCompleteUseCase } from "../../statistic_types_usage/usecase/statistic_types_usage_computed_usecase";
 import { JsonValue } from "@prisma/client/runtime/library";
+import exp from "constants";
+import { Prisma } from "@prisma/client";
 class TestModel {
   functionName: string;
 
@@ -186,6 +188,46 @@ export class RunTaskModel {
   @IsString()
   code: string;
 }
+class Statistic {
+  date: string | Date;
+  count: number;
+}
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+const dates: string[] = [
+  formatDate(new Date(2025, 0, 1)),
+  formatDate(new Date(2025, 0, 2)),
+];
+const targetDate = new Date(2025, 0, 1);
+
+const foundDate = dates.find((date) => {
+  return date === formatDate(targetDate);
+});
+
+if (foundDate) {
+  console.log("Дата найдена:", foundDate);
+} else {
+  console.log("Дата не найдена");
+}
+
+export class UpdateUserStatistic extends CallbackCore {
+  call = (userStatistic: {
+    id: number;
+    userId: number;
+    year: number;
+    statistic: JsonValue | { statistic: Statistic[] };
+  }) => {
+    let s: { statistic: Statistic[] } = { statistic: [] };
+    s = JSON.parse(userStatistic.statistic as string);
+  };
+}
+
 export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
   validationModel: ClassConstructor<RunTaskModel> = RunTaskModel;
   call = async (model: RunTaskModel): ResponseBase =>
@@ -263,14 +305,29 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
             });
           });
 
-          const statisticTaskSolutions =
+          Result.isNotNull(
             await this.client.statisticTaskSolutions.findFirst({
               where: {
                 userId: this.getUserIdNumber(),
                 year: new Date().getFullYear(),
               },
-            });
-          statisticTaskSolutions.date;
+            })
+          ).fold(
+            async (s) => {},
+            async (_) => {
+              Result.isNotNull(
+                await this.client.statisticTaskSolutions.create({
+                  data: {
+                    userId: this.getUserIdNumber(),
+                    year: new Date().getFullYear(),
+                    statistic: JSON.stringify({}),
+                  },
+                })
+              ).map((el) => {});
+            }
+          );
+
+          // statisticTaskSolutions.date;
 
           // [{ date: "2025-08-01", count: 5, level: 2 }];
           return Result.isNotNull(

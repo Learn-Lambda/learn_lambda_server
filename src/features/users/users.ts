@@ -5,7 +5,9 @@ import { CreateUser } from "./usecase/create_user";
 import { DeleteUser } from "./usecase/delete_user";
 import { EditUser } from "./usecase/edit_user";
 import { GetAllUsers } from "./usecase/get_all_users";
+import { GetAllYearsUserActivity } from "./usecase/get_all_years_user_activity";
 import { GetTokenVscode } from "./usecase/get_token_vscode";
+import { GetUserActivityInYear } from "./usecase/get_user_activity_in_year";
 import { GetUserProfileAtJWT } from "./usecase/get_user_profile_at_jwt";
 
 export class UsersFeature extends FeatureHttpController {
@@ -28,6 +30,16 @@ export class UsersFeature extends FeatureHttpController {
         AccessLevel.user
       ),
       new SubRouter("/check/token", new CheckToken(), AccessLevel.public),
+      new SubRouter(
+        "/get/user/activity/in/year",
+        new GetUserActivityInYear(),
+        AccessLevel.public
+      ),
+      new SubRouter(
+        "/get/all/years/user/activity",
+        new GetAllYearsUserActivity(),
+        AccessLevel.public
+      ),
     ];
   }
 }

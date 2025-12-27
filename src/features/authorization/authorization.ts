@@ -41,7 +41,7 @@ export class LoginUser extends CallbackStrategyWithValidationModel<User> {
         return Result.error(this.error);
       },
       async () => {
-        return Result.ok(this.error);
+        return Result.error(this.error);
       }
     );
 }
@@ -87,3 +87,4 @@ export class AuthorizationFeature extends FeatureHttpController {
     // new NewAdmin().call()
   }
 }
+

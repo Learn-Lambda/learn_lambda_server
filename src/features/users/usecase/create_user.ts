@@ -17,7 +17,7 @@ export class CreateUser extends CallbackStrategyCreateDbModel<UserModel> {
       data: {
         userId: id,
         year: new Date().getFullYear(),
-        date: [],
+        statistic: null,
       },
     });
   }
