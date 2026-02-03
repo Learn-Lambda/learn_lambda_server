@@ -42,6 +42,7 @@
     "error-stack-parser": "^2.1.4",
     "express": "^4.21.2",
     "express-fileupload": "^1.5.1",
+    "gigachat": "^0.0.18",
     "jsonwebtoken": "^9.0.2",
     "prettier": "^3.6.2",
     "recast": "^0.23.11",

@@ -1,4 +1,5 @@
 import { AuthorizationFeature } from "../../features/authorization/authorization";
+import { GtpFeature } from "../../features/gpt_chat/gpt_chat";
 import { RecognitionsFeature } from "../../features/recognitions/recognitions";
 import { SolutionsFeature } from "../../features/solutions/solutions";
 import { StatisticSolutionFeature } from "../../features/statistic_solution/statistic_solution";
@@ -16,4 +17,5 @@ export const httpRoutes = [
   new SolutionsFeature(),
   new StatisticSolutionFeature(),
   new StatisticTypesUsageFeature(),
+  // new GtpFeature(),
 ];

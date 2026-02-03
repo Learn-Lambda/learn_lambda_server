@@ -34,7 +34,7 @@ export class CallbackCore {
     return Result.isNotNull(
       await this.client.user.findFirst({
         where: { id: Number(this.currentSession) },
-      })
+      }),
     );
   };
 }
@@ -87,9 +87,9 @@ export abstract class CallbackStrategyUpdateModel<
           await this.client[`${this.dbCollectionName}`].findUnique({
             where: { id: model.id },
           }),
-          model
+          model,
         ),
-      })
+      }),
     );
 }
 export abstract class CallbackStrategyWithIdQuery extends CallbackCore {
@@ -119,7 +119,6 @@ export abstract class CallBackStrategyDeleteModelByQueryId extends CallbackCore 
   }
   abstract deleteCallback: undefined | callbackUpdateDelete;
 }
-
 
 export type callbackUpdateDelete = (id: number) => Promise<void>;
 export abstract class CallBackStrategyPagination<T> extends CallbackCore {
@@ -155,7 +154,7 @@ export abstract class CallBackStrategyPagination<T> extends CallbackCore {
           currentPage: skip,
         });
       },
-      async () => Result.error("CallBackStrategyPagination query error")
+      async () => Result.error("CallBackStrategyPagination query error"),
     );
   }
 }
@@ -182,7 +181,8 @@ export class SubRouter<A> implements ISubSetFeatureRouter<A> {
     | CallbackStrategyWithFilesUploads
     | CallBackStrategyPagination<A>
     | CallbackStrategyUpdateModel<any>
-    | CallBackStrategyDeleteModelByQueryId;
+    | CallBackStrategyDeleteModelByQueryId
+    | CallbackFind;
   constructor(
     subUrl: string,
     fn:
@@ -194,10 +194,11 @@ export class SubRouter<A> implements ISubSetFeatureRouter<A> {
       | CallbackStrategyWithFilesUploads
       | CallBackStrategyPagination<A>
       | CallbackStrategyUpdateModel<any>
-      | CallBackStrategyDeleteModelByQueryId,
+      | CallBackStrategyDeleteModelByQueryId
+      | CallbackFind,
 
     accessLevel = AccessLevel.user,
-    method?: HttpMethodType
+    method?: HttpMethodType,
   ) {
     this.fn = fn;
     this.subUrl = subUrl;
@@ -220,7 +221,8 @@ export interface ISubSetFeatureRouter<A> {
     | CallbackStrategyWithFilesUploads
     | CallBackStrategyPagination<A>
     | CallbackStrategyUpdateModel<any>
-    | CallBackStrategyDeleteModelByQueryId;
+    | CallBackStrategyDeleteModelByQueryId
+    | CallbackFind;
 }
 
 abstract class ICoreHttpController {
@@ -256,7 +258,7 @@ export class CoreHttpController<V> implements ICoreHttpController {
       (err) => {
         res.status(400).json({ error: String(err) });
         return;
-      }
+      },
     );
   }
   async call(): Promise<Routes> {
@@ -274,7 +276,7 @@ export class CoreHttpController<V> implements ICoreHttpController {
               (await valid(el.fn.validationModel, req.body)).fold(
                 // @ts-expect-error
                 (s) => this.responseHelper(res, el.fn.call(s)),
-                (e) => res.status(400).json(e)
+                (e) => res.status(400).json(e),
               );
 
               return;
@@ -283,7 +285,7 @@ export class CoreHttpController<V> implements ICoreHttpController {
               (await valid(el.fn.validationModel, req.body)).fold(
                 // @ts-expect-error
                 (s) => this.responseHelper(res, el.fn.call(s)),
-                (e) => res.status(400).json(e)
+                (e) => res.status(400).json(e),
               );
 
               return;
@@ -293,7 +295,7 @@ export class CoreHttpController<V> implements ICoreHttpController {
                 res
                   .status(400)
                   .json(
-                    "request query id is null, need query id ?id={id:String}"
+                    "request query id is null, need query id ?id={id:String}",
                   );
                 return;
               }
@@ -302,7 +304,7 @@ export class CoreHttpController<V> implements ICoreHttpController {
                   res
                     .status(400)
                     .json(
-                      `request query id  must fall under the pattern: ${el.fn.idValidationExpression.regExp} message: ${el.fn.idValidationExpression.message} `
+                      `request query id  must fall under the pattern: ${el.fn.idValidationExpression.regExp} message: ${el.fn.idValidationExpression.message} `,
                     );
                   return;
                 } else {
@@ -311,7 +313,7 @@ export class CoreHttpController<V> implements ICoreHttpController {
               } else {
                 await this.responseHelper(
                   res,
-                  el.fn.call(req["files"]["file"])
+                  el.fn.call(req["files"]["file"]),
                 );
               }
             }
@@ -339,7 +341,7 @@ export class CoreHttpController<V> implements ICoreHttpController {
                 res
                   .status(400)
                   .json(
-                    "request query id is null, need query id ?id={id:String}"
+                    "request query id is null, need query id ?id={id:String}",
                   );
                 return;
               }
@@ -350,14 +352,14 @@ export class CoreHttpController<V> implements ICoreHttpController {
               if (el.fn instanceof CallbackStrategyWithFileUpload) {
                 if (
                   !el.fn.checkingFileExpression.test(
-                    req["files"]["file"]["name"]
+                    req["files"]["file"]["name"],
                   )
                 ) {
                   res
                     .status(400)
                     .json(
                       "a file with this extension is expected: " +
-                        String(el.fn.checkingFileExpression)
+                        String(el.fn.checkingFileExpression),
                     );
                   return;
                 }
@@ -365,10 +367,10 @@ export class CoreHttpController<V> implements ICoreHttpController {
 
               await this.responseHelper(
                 res,
-                el.fn.call(req["files"]["file"], req.query.id)
+                el.fn.call(req["files"]["file"], req.query.id),
               );
             }
-          }
+          },
         );
       });
     }
@@ -377,12 +379,12 @@ export class CoreHttpController<V> implements ICoreHttpController {
         this.mainURL,
         validationModelMiddleware(this.validationModel),
         (req, res) =>
-          this.requestResponseController<V>(req, res, this.routes["POST"])
+          this.requestResponseController<V>(req, res, this.routes["POST"]),
       );
     }
     if (this.routes["DELETE"] != null) {
       this.router.delete(this.mainURL, (req, res) =>
-        this.requestResponseController<V>(req, res, this.routes["DELETE"])
+        this.requestResponseController<V>(req, res, this.routes["DELETE"]),
       );
     }
     if (this.routes["PUT"] != null) {
@@ -390,12 +392,12 @@ export class CoreHttpController<V> implements ICoreHttpController {
         this.mainURL,
         validationModelMiddleware(this.validationModel),
         (req, res) =>
-          this.requestResponseController<V>(req, res, this.routes["PUT"])
+          this.requestResponseController<V>(req, res, this.routes["PUT"]),
       );
     }
     if (this.routes["GET"] != null) {
       this.router.get(this.mainURL, (req, res) =>
-        this.requestResponseController<V>(req, res, this.routes["GET"])
+        this.requestResponseController<V>(req, res, this.routes["GET"]),
       );
     }
 
@@ -412,7 +414,7 @@ export class CoreHttpController<V> implements ICoreHttpController {
   public async requestResponseController<T>(
     req: Request,
     res: Response,
-    usecase: CallbackStrategyWithValidationModel<T>
+    usecase: CallbackStrategyWithValidationModel<T>,
   ) {
     let payload = null;
     const useCase = usecase as any;
@@ -433,7 +435,7 @@ export class CoreHttpController<V> implements ICoreHttpController {
 
       (err) => {
         return res.status(400).json({ error: String(err) });
-      }
+      },
     );
   }
   // TODO(IDONTSUDO):need fix to CallbackStrategyWithValidationModel<V>
@@ -448,11 +450,11 @@ export class CoreHttpController<V> implements ICoreHttpController {
 
 export const valid = async <T>(
   validationModelType: any,
-  object
+  object,
 ): Promise<Result<string, T>> => {
   const model = plainToInstance(
     validationModelType,
-    object
+    object,
   ) as unknown as object;
 
   const errors: ValidationError[] = await validate(model, {
@@ -479,3 +481,23 @@ export const valid = async <T>(
     return Result.ok(model as unknown as T);
   }
 };
+export abstract class CallbackFind extends CallbackCore {
+  abstract dbCollectionName: string;
+  async call(prop: string, value: string): ResponseBase {
+    let result = null;
+    try {
+      result = await this.client[`${this.dbCollectionName}`].findMany({
+        where: {
+          [prop]: {
+            contains: value,
+            mode: "insensitive",
+          },
+        },
+      });
+    } catch (e) {
+      console.log(e);
+      result = null;
+    }
+    return Result.isNotNull(result);
+  }
+}

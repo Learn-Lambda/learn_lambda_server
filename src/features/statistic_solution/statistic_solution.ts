@@ -11,7 +11,7 @@ export class StatisticSolutionFeature extends FeatureHttpController {
         "/get/years/user/statistic",
         new GetYearsUserStatistic(),
         AccessLevel.public,
-        "GET",
+        "POST",
       ),
       new SubRouter(
         "/get/user/statistic/with/year",

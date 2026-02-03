@@ -15,10 +15,15 @@ export class GetYearsUserStatistic extends CallbackStrategyWithValidationModel<U
   validationModel: ClassConstructor<UserStatistic> = UserStatistic;
   call = async (model: UserStatistic): ResponseBase =>
     Result.isNotNull(
-      this.client.statisticTaskSolutions.findMany({
+      await this.client.statisticTaskSolutions.findMany({
         where: {
           userId: model.id,
         },
+      })
+    ).map((el) =>
+      el.map((element) => {
+        element.statistic = JSON.parse(element.statistic as any);
+        return element;
       })
     );
 }

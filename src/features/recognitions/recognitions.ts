@@ -2,6 +2,7 @@ import { IsNumber, IsString } from "class-validator";
 import { FeatureHttpController } from "../../core/controllers/feature_http_controller";
 import {
   AccessLevel,
+  CallbackFind,
   CallbackStrategyCreateDbModel,
   CallBackStrategyDeleteModelByQueryId,
   CallBackStrategyPagination,
@@ -13,9 +14,11 @@ import { Prisma } from "@prisma/client";
 import { ClassConstructor } from "class-transformer";
 export class RecognitionCategoryModel {
   @IsString()
-  name: string;
-  @IsString()
   helper: string;
+  @IsString()
+  comonCategory: string;
+  @IsString()
+  subCategory: string;
 }
 export class RecognitionCategoryEditModel extends RecognitionCategoryModel {
   @IsNumber()
@@ -38,10 +41,12 @@ class EditRecognitionCategory extends CallbackStrategyUpdateModel<RecognitionCat
 class DeleteRecognitionCategory extends CallBackStrategyDeleteModelByQueryId {
   dbCollectionName: string = "recognitionCategory";
   deleteCallback = async (id: number) => {
-    await this.client.recognitionTask.deleteMany({ where: { categoryId: id } });
+    // await this.client.recognitionTask.deleteMany({ where: { categoryId: id } });
   };
 }
-
+class FindRecognitionCatogory extends CallbackFind {
+  dbCollectionName: string = "recognitionCategory";
+}
 class RecognitionTaskModel {
   @IsNumber()
   categoryId: number;
@@ -50,23 +55,25 @@ class RecognitionTaskEditModel extends RecognitionTaskModel {
   @IsNumber()
   id: number;
 }
-class GetAllRecognitionTask extends CallBackStrategyPagination<Prisma.RecognitionTaskWhereInput> {
-  dbCollectionName: string = "recognitionTask";
+class GetAllRecognitionTask extends CallBackStrategyPagination<any> {
+  dbCollectionName: string = "recognitionCategory";
 }
 class CreateNewRecognitionTask extends CallbackStrategyCreateDbModel<RecognitionTaskModel> {
   validationModel: ClassConstructor<RecognitionTaskModel> =
     RecognitionTaskModel;
-  dbCollectionName: string = "recognitionTask";
+  dbCollectionName: string = "recognitionCategory";
 }
+
 class EditRecognitionTask extends CallbackStrategyUpdateModel<RecognitionTaskEditModel> {
-  dbCollectionName: string = "recognitionTask";
+  dbCollectionName: string = "recognitionCategory";
   validationModel: ClassConstructor<RecognitionTaskEditModel> =
     RecognitionTaskEditModel;
 }
 class DeleteRecognitionTask extends CallBackStrategyDeleteModelByQueryId {
   deleteCallback: callbackUpdateDelete;
-  dbCollectionName: string = "recognitionTask";
+  dbCollectionName: string = "recognitionCategory";
 }
+
 export class RecognitionsFeature extends FeatureHttpController {
   constructor() {
     super();
@@ -75,50 +82,55 @@ export class RecognitionsFeature extends FeatureHttpController {
         "/recognition/category",
         new GetAllRecognitionCategory(),
         AccessLevel.public,
-        "GET"
+        "GET",
       ),
       new SubRouter(
         "/recognition/category",
         new CreteNewRecognitionCategory(),
         AccessLevel.admin,
-        "POST"
+        "POST",
       ),
       new SubRouter(
         "/recognition/category",
         new EditRecognitionCategory(),
         AccessLevel.admin,
-        "PUT"
+        "PUT",
       ),
       new SubRouter(
         "/recognition/category",
         new DeleteRecognitionCategory(),
         AccessLevel.admin,
-        "DELETE"
+        "DELETE",
+      ),
+      new SubRouter(
+        "/recognition/category/find",
+        new FindRecognitionCatogory(),
+        AccessLevel.public,
       ),
 
       new SubRouter(
         "/recognition/tasks",
         new GetAllRecognitionTask(),
         AccessLevel.public,
-        "GET"
+        "GET",
       ),
       new SubRouter(
         "/recognition/tasks",
         new CreateNewRecognitionTask(),
         AccessLevel.admin,
-        "POST"
+        "POST",
       ),
       new SubRouter(
         "/recognition/tasks",
         new EditRecognitionTask(),
         AccessLevel.admin,
-        "PUT"
+        "PUT",
       ),
       new SubRouter(
         "/recognition/tasks",
         new DeleteRecognitionTask(),
         AccessLevel.admin,
-        "DELETE"
+        "DELETE",
       ),
     ];
   }

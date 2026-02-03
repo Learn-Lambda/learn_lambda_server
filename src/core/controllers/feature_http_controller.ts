@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Routes } from "../models/routes";
 import {
   AccessLevel,
+  CallbackFind,
   CallbackStrategyCreateDbModel,
   CallBackStrategyDeleteModelByQueryId,
   CallBackStrategyPagination,
@@ -49,21 +50,21 @@ export class FeatureHttpController extends CoreHttpController<any> {
                   needNext = validationMiddleware(
                     req,
                     res,
-                    process.env.USER_JWT_SECRET
+                    process.env.USER_JWT_SECRET,
                   );
                 }
                 if (el.accessLevel === AccessLevel.admin) {
                   needNext = validationMiddleware(
                     req,
                     res,
-                    process.env.ADMIN_JWT_SECRET
+                    process.env.ADMIN_JWT_SECRET,
                   );
                 }
                 if (el.accessLevel === AccessLevel.adminUser) {
                   needNext = validationMiddlewareNotResponse(
                     req,
                     res,
-                    process.env.USER_JWT_SECRET
+                    process.env.USER_JWT_SECRET,
                   );
                 }
                 if (needNext) {
@@ -77,7 +78,7 @@ export class FeatureHttpController extends CoreHttpController<any> {
                     } else {
                       await this.responseHelper(
                         res,
-                        el.fn.call(Number(req.query.id))
+                        el.fn.call(Number(req.query.id)),
                       );
                     }
                     return;
@@ -86,7 +87,7 @@ export class FeatureHttpController extends CoreHttpController<any> {
                     (await valid(el.fn.validationModel, req.body)).fold(
                       // @ts-expect-error
                       (s) => this.responseHelper(res, el.fn.call(s)),
-                      (e) => res.status(400).json(e)
+                      (e) => res.status(400).json(e),
                     );
 
                     return;
@@ -95,9 +96,23 @@ export class FeatureHttpController extends CoreHttpController<any> {
                     (await valid(el.fn.validationModel, req.body)).fold(
                       // @ts-expect-error
                       (s) => this.responseHelper(res, el.fn.call(s)),
-                      (e) => res.status(400).json(e)
+                      (e) => res.status(400).json(e),
                     );
 
+                    return;
+                  }
+                  if (el.fn instanceof CallbackFind) {
+                    if (req.body.prop === undefined) {
+                      return res.status(400).json("need prop key");
+                    }
+                    if (req.body.value === undefined) {
+                      return res.status(400).json("need value key");
+                    }
+
+                    await this.responseHelper(
+                      res,
+                      el.fn.call(req.body.prop, req.body.value),
+                    );
                     return;
                   }
                   if (el.fn instanceof CallBackStrategyPagination) {
@@ -109,8 +124,8 @@ export class FeatureHttpController extends CoreHttpController<any> {
                         res,
                         el.fn.helper(
                           Number(req.query.page),
-                          el.fn.call(Number(req.query.page))
-                        )
+                          el.fn.call(Number(req.query.page)),
+                        ),
                       );
                     }
                   }
@@ -118,7 +133,7 @@ export class FeatureHttpController extends CoreHttpController<any> {
                     (await valid(el.fn.validationModel, req.body)).fold(
                       // @ts-expect-error
                       (s) => this.responseHelper(res, el.fn.call(s)),
-                      (e) => res.status(400).json(e)
+                      (e) => res.status(400).json(e),
                     );
 
                     return;
@@ -128,7 +143,7 @@ export class FeatureHttpController extends CoreHttpController<any> {
                       res
                         .status(400)
                         .json(
-                          "request query id is null, need query id ?id={id:String}"
+                          "request query id is null, need query id ?id={id:String}",
                         );
                       return;
                     }
@@ -139,19 +154,19 @@ export class FeatureHttpController extends CoreHttpController<any> {
                         res
                           .status(400)
                           .json(
-                            `request query id  must fall under the pattern: ${el.fn.idValidationExpression.regExp} message: ${el.fn.idValidationExpression.message} `
+                            `request query id  must fall under the pattern: ${el.fn.idValidationExpression.regExp} message: ${el.fn.idValidationExpression.message} `,
                           );
                         return;
                       } else {
                         await this.responseHelper(
                           res,
-                          el.fn.call(req.query.id)
+                          el.fn.call(req.query.id),
                         );
                       }
                     } else {
                       await this.responseHelper(
                         res,
-                        el.fn.call(req["files"]["file"])
+                        el.fn.call(req["files"]["file"]),
                       );
                     }
                   }
@@ -179,7 +194,7 @@ export class FeatureHttpController extends CoreHttpController<any> {
                       res
                         .status(400)
                         .json(
-                          "request query id is null, need query id ?id={id:String}"
+                          "request query id is null, need query id ?id={id:String}",
                         );
                       return;
                     }
@@ -194,14 +209,14 @@ export class FeatureHttpController extends CoreHttpController<any> {
                     if (el.fn instanceof CallbackStrategyWithFileUpload) {
                       if (
                         !el.fn.checkingFileExpression.test(
-                          req["files"]["file"]["name"]
+                          req["files"]["file"]["name"],
                         )
                       ) {
                         res
                           .status(400)
                           .json(
                             "a file with this extension is expected: " +
-                              String(el.fn.checkingFileExpression)
+                              String(el.fn.checkingFileExpression),
                           );
                         return;
                       }
@@ -209,16 +224,16 @@ export class FeatureHttpController extends CoreHttpController<any> {
 
                     await this.responseHelper(
                       res,
-                      el.fn.call(req["files"]["file"], req.query.id)
+                      el.fn.call(req["files"]["file"], req.query.id),
                     );
                   }
                 }
-              }
+              },
             );
 
             return router;
-          })
-        )
+          }),
+        ),
       ),
     };
   }

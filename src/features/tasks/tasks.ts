@@ -16,6 +16,11 @@ import { CreateTask } from "./usecase/create_task";
 import { GetAllTasks, GetAllTasksClient } from "./usecase/get_all_tasks";
 import { RemoveTask } from "./usecase/remove_task";
 import { GetTagsStatistic } from "./usecase/get_tags_statistic";
+import { SolveWithAi } from "./usecase/solve_with_ai";
+import { DeleteAiSolution } from "./usecase/delete_ai_soluition";
+import { TaskAiSolved } from "./usecase/task_ai_solved";
+import { SendMessageSolvedAi } from "./usecase/send_message_solved_ai";
+import { GetMessagesWithTask } from "./usecase/get_messages_with_task";
 
 interface TaskUpdate extends IPrivateSocketData {
   tasks: number[];
@@ -30,7 +35,12 @@ export class TasksFeature extends FeatureHttpController {
     super();
     this.subRoutes = [
       new SubRouter("/tasks", new GetAllTasks(), AccessLevel.public, "GET"),
-
+      new SubRouter(
+        "/task/ai/solved",
+        new TaskAiSolved(),
+        AccessLevel.public,
+        "POST"
+      ),
       new SubRouter(
         "/get/all/task/client",
         new GetAllTasksClient(),
@@ -49,6 +59,25 @@ export class TasksFeature extends FeatureHttpController {
       new SubRouter("/tasks", new DeleteTask(), AccessLevel.admin, "DELETE"),
       new SubRouter("/run/task", new RunTask(), AccessLevel.user, "POST"),
       new SubRouter("/add/task", new AddTask(), AccessLevel.user, "POST"),
+      new SubRouter('/get/messages/with/task', new GetMessagesWithTask(),AccessLevel.user,'POST'),
+      new SubRouter(
+        "/send/message/solved/ai",
+        new SendMessageSolvedAi(),
+        AccessLevel.public,
+        "POST"
+      ),
+      new SubRouter(
+        "/delete/ai/solution",
+        new DeleteAiSolution(),
+        AccessLevel.user,
+        "POST"
+      ),
+      new SubRouter(
+        "/solve/with/ai",
+        new SolveWithAi(),
+        AccessLevel.adminUser,
+        "POST"
+      ),
       new SubRouter(
         "/task/add/solution",
         new TaskAddSolution(),

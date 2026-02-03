@@ -7,6 +7,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
+//пользователь
 model User {
   id         Int      @id @default(autoincrement())
   email      String   @unique
@@ -15,22 +16,24 @@ model User {
   createDate DateTime @default(now())
 }
 
+// задача для решения кодом
 model Task {
-  id                    Int      @id @default(autoincrement())
-  name                  String
-  description           String
-  functionName          String
-  code                  String
-  complexity            Int
-  createDate            DateTime @default(now())
-  testArguments         String
-  numberOfTimesSolved   Int      @default(0)
-  isOpen                Boolean  @default(false)
-  tags                  String[] @default([])
-  usersWhoSolvedTheTask Int[]    @default([])
-  usersWhoSolvedTaskAiHelp Int[] @default([])
+  id                       Int      @id @default(autoincrement())
+  name                     String
+  description              String
+  functionName             String
+  code                     String
+  complexity               Int
+  createDate               DateTime @default(now())
+  testArguments            String
+  numberOfTimesSolved      Int      @default(0)
+  isOpen                   Boolean  @default(false)
+  tags                     String[] @default([])
+  usersWhoSolvedTheTask    Int[]    @default([])
+  usersWhoSolvedTaskAiHelp Int[]    @default([])
 }
 
+//решения задач для
 model Solution {
   id         Int      @id @default(autoincrement())
   authors    Int[]
@@ -62,41 +65,53 @@ model SelectAllTask {
 }
 
 model RecognitionCategory {
-  id              Int               @id @default(autoincrement())
-  createDate      DateTime          @default(now())
-  name            String
-  //markdown preview
-  helper          String
-  RecognitionTask RecognitionTask[]
+  id            Int    @id @default(autoincrement())
+  helper        String
+  comonCategory String
+  subCategory   String
 }
 
-model RecognitionTask {
-  id         Int                 @id @default(autoincrement())
-  createDate DateTime            @default(now())
-  categoryId Int
-  category   RecognitionCategory @relation(fields: [categoryId], references: [id])
+model RecognitionCategoryTask {
+  id                    Int    @id @default(autoincrement())
+  //RecognitionCategory id
+  recognitionCategoryId Int
+  code                  String
+  ranges                Json
 }
 
+//текущая активаня колекция задач
 model UserCurrentTaskCollection {
   id              Int   @id @default(autoincrement())
   userId          Int
   currentTasksIds Int[] @default([])
 }
 
+//статистика контертного пользователя по языку
 model StatisticTypesUsage {
   id                 Int  @id @default(autoincrement())
   userId             Int
   jsonStatisticUsage Json
 }
 
+//статистика пользователя за год
 model StatisticTaskSolutions {
-  id     Int      @id @default(autoincrement())
-  userId Int
-  year   Int
-  statistic  Json
+  id        Int  @id @default(autoincrement())
+  userId    Int
+  year      Int
+  statistic Json
 }
 
+//общая статистика тегов 
 model SolutionTags {
-  id                 Int  @id @default(autoincrement())
+  id                 Int   @id @default(autoincrement())
   jsonStatisticUsage Json?
+}
+
+// закешированные сообщения решенных задач с помощью ИИ
+model SolvedWithAi {
+  id            Int      @id @default(autoincrement())
+  solvedMessage Json
+  taskId        Int
+  userId        Int
+  date          DateTime
 }

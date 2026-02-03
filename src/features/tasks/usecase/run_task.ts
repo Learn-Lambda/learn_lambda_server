@@ -34,7 +34,7 @@ const transpile = (code: string): Result<string, string> => {
           module: ts.ModuleKind.CommonJS,
           target: ts.ScriptTarget.ES5,
         },
-      }).outputText
+      }).outputText,
     );
   } catch (_) {
     return Result.error("transpile error");
@@ -61,13 +61,13 @@ export interface Value {
 
 function hasFunctionNamedFnInString(
   code: string,
-  functionName: string
+  functionName: string,
 ): Result<string, boolean> {
   const sourceFile = ts.createSourceFile(
     "temp.ts", // имя файла произвольное, нужно для парсинга
     code,
     ts.ScriptTarget.Latest,
-    true
+    true,
   );
 
   let found = false;
@@ -103,7 +103,7 @@ function hasFunctionNamedFnInString(
 
 export class RunTaskUseCase {
   call = async (
-    testModel: TestModel
+    testModel: TestModel,
   ): Promise<Result<Result<TaskExecuteResult, any>[], any>> =>
     Result.ok(
       testModel.testArguments
@@ -126,8 +126,8 @@ export class RunTaskUseCase {
 
         ${testModel.testFunction}
         assert(${testModel.functionName}, [${argumentsMapper(
-          testModel.testArguments.at(index).arguments
-        )}], ${argumentsMapper(testModel.testArguments.at(index).result)})`
+          testModel.testArguments.at(index).arguments,
+        )}], ${argumentsMapper(testModel.testArguments.at(index).result)})`,
         )
         .map((el, index) =>
           transpile(el).map((code) =>
@@ -139,16 +139,22 @@ export class RunTaskUseCase {
                     testModel.testArguments.at(index).arguments,
                     vmResult.result,
                     testModel.testArguments.at(index).result,
-                    vmResult.status
-                  )
-                )
-              )
-            )
-          )
-        )
+                    vmResult.status,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
     );
 }
-
+function isSameDay(date1: Date, date2: Date): boolean {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+}
 export class TaskExecuteResult {
   functionName: string;
   wasLaunchedWithArguments: any;
@@ -160,7 +166,7 @@ export class TaskExecuteResult {
     wasLaunchedWithArguments,
     theResultWasObtained,
     theResultWasExpected,
-    status
+    status,
   ) {
     this.functionName = functionName;
     this.wasLaunchedWithArguments = wasLaunchedWithArguments;
@@ -177,7 +183,7 @@ export class TaskExecuteResult {
     return `функция ${
       this.functionName
     } была запущена с ${f()} ${JSON.stringify(
-      this.wasLaunchedWithArguments.join(",")
+      this.wasLaunchedWithArguments.join(","),
     )} `;
   }
 }
@@ -188,7 +194,7 @@ export class RunTaskModel {
   @IsString()
   code: string;
 }
-class Statistic {
+interface Statistic {
   date: string | Date;
   count: number;
 }
@@ -200,31 +206,50 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-const dates: string[] = [
-  formatDate(new Date(2025, 0, 1)),
-  formatDate(new Date(2025, 0, 2)),
-];
-const targetDate = new Date(2025, 0, 1);
-
-const foundDate = dates.find((date) => {
-  return date === formatDate(targetDate);
-});
-
-if (foundDate) {
-  console.log("Дата найдена:", foundDate);
-} else {
-  console.log("Дата не найдена");
-}
-
 export class UpdateUserStatistic extends CallbackCore {
-  call = (userStatistic: {
-    id: number;
-    userId: number;
-    year: number;
-    statistic: JsonValue | { statistic: Statistic[] };
-  }) => {
-    let s: { statistic: Statistic[] } = { statistic: [] };
-    s = JSON.parse(userStatistic.statistic as string);
+  call = async (userId: number) => {
+    const statisticTaskSolutions =
+      await this.client.statisticTaskSolutions.findFirst({
+        where: { userId: userId, year: new Date().getFullYear() },
+      });
+    // console.log(statisticTaskSolutions.statistic)
+    if (statisticTaskSolutions.statistic === null) {
+      statisticTaskSolutions.statistic = [];
+    } else {
+      statisticTaskSolutions.statistic = JSON.parse(
+        statisticTaskSolutions.statistic as string,
+      );
+    }
+    // @ts-ignore
+    const statistics = (statisticTaskSolutions.statistic as Statistic[]).map(
+      (el) => {
+        return {
+          date: new Date(el.date),
+          count: el.count,
+        };
+      },
+    );
+
+    statisticTaskSolutions.statistic = JSON.stringify(
+      statisticTaskSolutions.statistic,
+    );
+
+    const foundDate = statistics.find((date) => {
+      return formatDate(date.date) === formatDate(new Date());
+    });
+
+    if (foundDate) {
+      foundDate.count += 1;
+    } else {
+      statistics.push({ date: new Date(), count: 1 });
+    }
+    statisticTaskSolutions.statistic = JSON.stringify(statistics);
+    await this.client.statisticTaskSolutions.update({
+      where: {
+        id: statisticTaskSolutions.id,
+      },
+      data: statisticTaskSolutions,
+    });
   };
 }
 
@@ -232,23 +257,40 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
   validationModel: ClassConstructor<RunTaskModel> = RunTaskModel;
   call = async (model: RunTaskModel): ResponseBase =>
     Result.isNotNull(
-      await this.client.task.findFirst({ where: { id: model.taskNumber } })
+      await this.client.task.findFirst({ where: { id: model.taskNumber } }),
     ).map(async (databaseModel) => {
       return await (
         await new RunTaskUseCase().call(
           new TestModel(
             databaseModel.functionName,
             model.code,
-            JSON.parse(databaseModel.testArguments)
-          )
+            JSON.parse(databaseModel.testArguments),
+          ),
         )
       ).map(async (runTask) => {
         const runTaskResult = runTask as TestResult[];
         const testIsSuccess = runTaskResult
           .filter((el) => el.value.status)
           .isNotEmpty();
-        console.log(runTask);
-        const isAiSolution = false;
+
+        const isAiSolution: boolean = Result.isNotNull(
+          await this.client.solvedWithAi.findFirst({
+            where: {
+              taskId: databaseModel.id,
+              userId: {
+                equals: this.getUserIdNumber(),
+              },
+            },
+          }),
+        ).fold(
+          (solvedMessage) => {
+            if (isNaN(solvedMessage.date.getTime())) return false;
+            if (isSameDay(solvedMessage.date, new Date())) return true;
+            return false;
+          },
+          (_) => false,
+        );
+
         if (testIsSuccess) {
           const userCurrentTaskCollection =
             await this.client.userCurrentTaskCollection.findFirst({
@@ -259,18 +301,23 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
             where: { id: userCurrentTaskCollection.id },
             data: {
               currentTasksIds: userCurrentTaskCollection.currentTasksIds.filter(
-                (el) => el !== model.taskNumber
+                (el) => el !== model.taskNumber,
               ),
             },
           });
           const formatCode = await removeMissingConsoleLogAndFormat(model.code);
+          databaseModel.usersWhoSolvedTheTask.push(this.getUserIdNumber());
+          await this.client.task.update({
+            where: { id: databaseModel.id },
+            data: databaseModel,
+          });
 
           (
             await new StatisticTypeUsageCompleteUseCase().call(
-              codeOneCall(model.code)
+              codeOneCall(model.code),
             )
           ).map(async (statisticTypeUsage) => {
-            // console.log(JSON.stringify(statisticTypeUsage));
+            await new UpdateUserStatistic().call(this.getUserIdNumber());
 
             const statisticTypesUsage =
               await this.client.statisticTypesUsage.findFirst({
@@ -281,8 +328,9 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
 
             const jsonStatisticUsage = JSON.parse(
               // @ts-ignore
-              statisticTypesUsage.jsonStatisticUsage
+              statisticTypesUsage.jsonStatisticUsage,
             );
+
             Object.entries(statisticTypeUsage).forEach((value) => {
               if (Object.keys(value.at(1)).length !== 0) {
                 Object.entries(value.at(1)).forEach((el) => {
@@ -311,7 +359,7 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
                 userId: this.getUserIdNumber(),
                 year: new Date().getFullYear(),
               },
-            })
+            }),
           ).fold(
             async (s) => {},
             async (_) => {
@@ -322,14 +370,11 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
                     year: new Date().getFullYear(),
                     statistic: JSON.stringify({}),
                   },
-                })
+                }),
               ).map((el) => {});
-            }
+            },
           );
 
-          // statisticTaskSolutions.date;
-
-          // [{ date: "2025-08-01", count: 5, level: 2 }];
           return Result.isNotNull(
             await this.client.solution.create({
               data: {
@@ -338,7 +383,7 @@ export class RunTask extends CallbackStrategyWithValidationModel<RunTaskModel> {
                 code: formatCode,
                 counter: 0,
               },
-            })
+            }),
           ).map(() => Result.ok(runTaskResult));
         } else {
           return Result.ok(runTaskResult);
@@ -355,7 +400,7 @@ const removeConsoleLogs = (code: string) => {
         ? index
         : line.includes("console.log") && line.includes("//")
           ? index
-          : -1
+          : -1,
     )
     .filter((index) => index !== -1);
   return lines.filter((_, index) => !indexes.includes(index)).join("\n");
@@ -367,7 +412,7 @@ const removeMissingConsoleLogAndFormat = (code: string) => {
 
 async function formatCode(
   code: string,
-  parser: prettier.BuiltInParserName = "typescript"
+  parser: prettier.BuiltInParserName = "typescript",
 ): Promise<string> {
   return prettier.format(code, {
     parser,
@@ -397,7 +442,7 @@ const codeOneCall = (code: string) => {
         ? index
         : line.includes("console.log") && line.includes("//")
           ? index
-          : -1
+          : -1,
     )
     .filter((index) => index !== -1);
   indexes.pop();
@@ -407,15 +452,15 @@ export class TaskAddSolution extends CallbackStrategyWithValidationModel<RunTask
   validationModel: ClassConstructor<RunTaskModel> = RunTaskModel;
   async call(model: RunTaskModel): ResponseBase {
     return Result.isNotNull(
-      await this.client.task.findFirst({ where: { id: model.taskNumber } })
+      await this.client.task.findFirst({ where: { id: model.taskNumber } }),
     ).map(async (databaseModel) => {
       return await (
         await new RunTaskUseCase().call(
           new TestModel(
             databaseModel.functionName,
             model.code,
-            JSON.parse(databaseModel.testArguments)
-          )
+            JSON.parse(databaseModel.testArguments),
+          ),
         )
       ).map(async (runTask) => {
         const runTaskResult = runTask as TestResult[];
@@ -427,7 +472,7 @@ export class TaskAddSolution extends CallbackStrategyWithValidationModel<RunTask
 
           (
             await new StatisticTypeUsageCompleteUseCase().call(
-              codeOneCall(model.code)
+              codeOneCall(model.code),
             )
           ).map(async (statisticTypeUsage) => {
             // const statisticTypesUsage =
@@ -456,7 +501,7 @@ export class TaskAddSolution extends CallbackStrategyWithValidationModel<RunTask
                 where: { id: databaseModel.id },
                 data: {
                   tags: databaseModel.tags.concat(
-                    tags.filter((el) => !databaseModel.tags.includes(el))
+                    tags.filter((el) => !databaseModel.tags.includes(el)),
                   ),
                 },
               });
@@ -472,7 +517,7 @@ export class TaskAddSolution extends CallbackStrategyWithValidationModel<RunTask
                 code: formatCode,
                 counter: 0,
               },
-            })
+            }),
           ).map(() => Result.ok(runTaskResult));
         } else {
           return Result.ok(runTaskResult);
@@ -496,15 +541,15 @@ class UpdateGlobalsTagsStatisticUseCase extends CallbackCore {
             data: { jsonStatisticUsage: JSON.stringify({}) },
           }),
           newTags,
-          operation
-        )
+          operation,
+        ),
     );
   };
 
   _update = async (
     solutionTags: { id: number; jsonStatisticUsage: JsonValue },
     newTags: string[],
-    operation: Operation
+    operation: Operation,
   ) => {
     const oldTags = JSON.parse(solutionTags.jsonStatisticUsage as string);
     newTags.forEach((el) => {

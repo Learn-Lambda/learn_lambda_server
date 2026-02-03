@@ -6,7 +6,7 @@ import { PrivateSocketSubscriber } from "./core/controllers/private_socket_subsc
 import { gptChatPresentation } from "./features/gpt_chat/gpt_chat";
 import * as dotenv from "dotenv";
 import { tasksSocketFeature } from "./features/tasks/tasks";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 dotenv.config();
 extensions();
@@ -25,6 +25,7 @@ const socketSubscribers: PrivateSocketSubscriber<any>[] = [
   //   },
   // });
 
+  // new GigaChatHttpRepository().sendMessage('');
   new App(
     await Promise.all(httpRoutes.map(async (el) => await el.call())),
     socketSubscribers

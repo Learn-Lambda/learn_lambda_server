@@ -27,22 +27,20 @@ export class LoginUser extends CallbackStrategyWithValidationModel<User> {
   validationModel = User;
   call = async (model: User): ResponseBase =>
     Result.isNotNull(
-      await this.client.user.findFirst({ where: { login: model.login } })
+      await this.client.user.findFirst({ where: { login: model.login } }),
     ).fold(
       async (databaseModel) => {
         if (model.password === databaseModel.password) {
           return Result.ok({
             token: jwt.sign(
               { userId: databaseModel.id.toString() },
-              process.env.USER_JWT_SECRET
+              process.env.USER_JWT_SECRET,
             ),
           });
         }
         return Result.error(this.error);
       },
-      async () => {
-        return Result.error(this.error);
-      }
+      async () => Result.error(this.error),
     );
 }
 
@@ -58,13 +56,13 @@ export class LoginAdmin extends CallbackStrategyWithValidationModel<AdminModel> 
     Result.isNotNull(
       await this.client.admin.findFirst({
         where: { login: model.login },
-      })
+      }),
     ).fold(
       async (model) =>
         Result.ok({
           token: jwt.sign({ userId: model.id }, process.env.ADMIN_JWT_SECRET),
         }),
-      async () => Result.error("user is not registered")
+      async () => Result.error("user is not registered"),
     );
 }
 
@@ -87,4 +85,3 @@ export class AuthorizationFeature extends FeatureHttpController {
     // new NewAdmin().call()
   }
 }
-
